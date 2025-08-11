@@ -419,9 +419,10 @@
 
 
             // --- API ---
+            const PROXY_BASE_URL = 'https://xiaofenproxy-ffdhh3dae9cthfd8.canadacentral-01.azurewebsites.net/api/proxyfunction';
             const api = {
                 getArtistInfo: (aid) => {
-                    return fetch("https://app.xiaofen.fun/api/m8551/674fb5df35978", {
+                    return fetch(`${PROXY_BASE_URL}/m8551/674fb5df35978`, {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json; charset=UTF-8',
@@ -435,7 +436,7 @@
                     }).then(res => res.json());
                 },
                 getArtistWorks: (userId, page = 1) => {
-                    return fetch("https://app.xiaofen.fun/api/m8551/64448e18f032c", {
+                    return fetch(`${PROXY_BASE_URL}/m8551/64448e18f032c`, {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json; charset=UTF-8',
