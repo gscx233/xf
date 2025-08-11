@@ -120,6 +120,38 @@
             transform: translateY(-5px);
         }
 
+        .artist-card .remove-artist-btn {
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            width: 20px;
+            height: 20px;
+            background-color: rgba(0,0,0,0.6);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            line-height: 20px;
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+
+        .artist-card:hover .remove-artist-btn {
+            opacity: 1;
+        }
+
+        .artist-card.dragging {
+            opacity: 0.5;
+        }
+
+        .artist-card.drag-over {
+            border: 2px dashed var(--accent-color);
+        }
+
         .artist-card img {
             width: 100%;
             height: 150px;
@@ -282,6 +314,7 @@
                 <div class="input-group">
                     <input type="number" id="aid-input" placeholder="输入艺术家ID (aid)">
                     <button id="add-artist-button">添加</button>
+                    <button id="sort-artist-button" class="secondary">按添加顺序排序</button>
                 </div>
             </div>
             <div id="artists-container" class="card">
@@ -362,6 +395,7 @@
             const artistListView = document.getElementById('artist-list-view');
             const aidInput = document.getElementById('aid-input');
             const addArtistButton = document.getElementById('add-artist-button');
+            const sortArtistButton = document.getElementById('sort-artist-button');
             const artistsContainer = document.getElementById('artists-container');
 
             const artistDetailView = document.getElementById('artist-detail-view');
@@ -744,6 +778,8 @@
             };
 
             const renderArtistList = () => {
+                let draggedArtistId = null;
+
                 artistsContainer.innerHTML = '';
                 if (state.artists.length === 0) {
                     artistsContainer.innerHTML = '<p>还没有艺术家，请通过上方的输入框添加一个。</p>';
@@ -753,14 +789,67 @@
                     const card = document.createElement('div');
                     card.className = 'artist-card';
                     card.dataset.aid = artist.aid;
+                    card.draggable = true;
                     card.innerHTML = `
+                        <button class="remove-artist-btn">&times;</button>
                         <img src="${artist.avatar}" alt="${artist.name}">
                         <p>${artist.name}</p>
                     `;
+
+                    // Remove listener
+                    card.querySelector('.remove-artist-btn').addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        if (confirm(`确定要移除艺术家 "${artist.name}" 吗？`)) {
+                            const index = state.artists.findIndex(a => a.aid == artist.aid);
+                            if (index > -1) {
+                                state.artists.splice(index, 1);
+                                saveArtists();
+                                renderArtistList();
+                            }
+                        }
+                    });
+
+                    // Navigate listener
                     card.addEventListener('click', () => {
                         state.currentArtist = artist;
                         navigateTo('artist-detail');
                     });
+
+                    // Drag and Drop listeners
+                    card.addEventListener('dragstart', () => {
+                        draggedArtistId = artist.aid;
+                        setTimeout(() => card.classList.add('dragging'), 0);
+                    });
+
+                    card.addEventListener('dragend', () => {
+                        card.classList.remove('dragging');
+                    });
+
+                    card.addEventListener('dragover', (e) => {
+                        e.preventDefault();
+                        card.classList.add('drag-over');
+                    });
+
+                    card.addEventListener('dragleave', () => {
+                        card.classList.remove('drag-over');
+                    });
+
+                    card.addEventListener('drop', (e) => {
+                        e.preventDefault();
+                        card.classList.remove('drag-over');
+                        if (draggedArtistId === artist.aid) return;
+
+                        const draggedIndex = state.artists.findIndex(a => a.aid == draggedArtistId);
+                        const targetIndex = state.artists.findIndex(a => a.aid == artist.aid);
+
+                        if (draggedIndex > -1 && targetIndex > -1) {
+                            const [draggedItem] = state.artists.splice(draggedIndex, 1);
+                            state.artists.splice(targetIndex, 0, draggedItem);
+                            saveArtists();
+                            renderArtistList();
+                        }
+                    });
+
                     artistsContainer.appendChild(card);
                 });
             };
@@ -791,6 +880,7 @@
                             avatar: artistData.avatar,
                             info: artistData.info,
                             bg_img: artistData.bg_img,
+                            added_at: Date.now(),
                         };
                         state.artists.push(newArtist);
                         saveArtists();
@@ -824,7 +914,19 @@
                 const savedToken = localStorage.getItem('user_token');
                 if (savedToken) {
                     state.userToken = savedToken;
-                    state.artists = JSON.parse(localStorage.getItem('artists')) || [];
+                    let loadedArtists = JSON.parse(localStorage.getItem('artists')) || [];
+                    // Data migration for older entries without timestamps
+                    let needsSave = false;
+                    loadedArtists.forEach((artist, index) => {
+                        if (typeof artist.added_at === 'undefined') {
+                            artist.added_at = Date.now() - (loadedArtists.length - index) * 1000;
+                            needsSave = true;
+                        }
+                    });
+                    state.artists = loadedArtists;
+                    if (needsSave) {
+                        saveArtists();
+                    }
                     navigateTo('artist-list');
                 } else {
                     userTokenInput.value = '942dcf1f-4eae-9172-f7d0-2f95e797abf7'; // Default token
@@ -839,6 +941,12 @@
                 addArtistButton.addEventListener('click', handleAddArtist);
                 aidInput.addEventListener('keypress', (e) => {
                     if (e.key === 'Enter') handleAddArtist();
+                });
+
+                sortArtistButton.addEventListener('click', () => {
+                    state.artists.sort((a, b) => a.added_at - b.added_at);
+                    saveArtists();
+                    renderArtistList();
                 });
 
                 backToListButton.addEventListener('click', () => navigateTo('artist-list'));
