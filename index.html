@@ -1,0 +1,893 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>艺术家画廊</title>
+    <style>
+        :root {
+            --bg-color: #121212;
+            --primary-color: #1e1e1e;
+            --secondary-color: #2a2a2a;
+            --text-color: #e0e0e0;
+            --accent-color: #007bff;
+            --border-color: #444;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+
+        .view {
+            display: none;
+            flex-direction: column;
+            gap: 20px;
+            max-width: 1200px;
+            margin: auto;
+        }
+
+        .view.active {
+            display: flex;
+        }
+
+        /* --- Login View --- */
+        #login-view {
+            max-width: 400px;
+        }
+
+        /* --- App View --- */
+        #app-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 20px;
+            background-color: var(--primary-color);
+            border-radius: 8px;
+        }
+
+        #app-header h1 {
+            margin: 0;
+            font-size: 1.5em;
+        }
+
+        /* --- Common Styles --- */
+        .card {
+            background-color: var(--primary-color);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 15px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        }
+
+        .input-group {
+            display: flex;
+            gap: 10px;
+        }
+
+        input[type="text"], input[type="number"] {
+            flex-grow: 1;
+            padding: 10px;
+            background-color: var(--secondary-color);
+            border: 1px solid var(--border-color);
+            color: var(--text-color);
+            border-radius: 4px;
+        }
+
+        button {
+            padding: 10px 15px;
+            background-color: var(--accent-color);
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        button:hover {
+            background-color: #0056b3;
+        }
+
+        button.secondary {
+            background-color: var(--secondary-color);
+        }
+
+        button.secondary:hover {
+            background-color: #4d4d4d;
+        }
+
+        /* --- Artist List --- */
+        #artists-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            gap: 20px;
+        }
+
+        .artist-card {
+            background-color: var(--secondary-color);
+            border-radius: 8px;
+            overflow: hidden;
+            text-align: center;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        .artist-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .artist-card img {
+            width: 100%;
+            height: 150px;
+            object-fit: cover;
+        }
+
+        .artist-card p {
+            margin: 10px 0;
+            font-weight: bold;
+        }
+
+        /* --- Artist Detail --- */
+        #artist-detail-header {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        #artist-detail-header img {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+        }
+
+        #works-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 15px;
+        }
+
+        .work-card {
+            position: relative;
+            background-color: var(--secondary-color);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .work-card img, .work-card video {
+            width: 100%;
+            height: 200px;
+            object-fit: cover;
+            cursor: pointer;
+        }
+
+        .work-card-info {
+            padding: 10px;
+            font-size: 0.9em;
+        }
+
+        .work-card-checkbox {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            width: 20px;
+            height: 20px;
+            cursor: pointer;
+        }
+
+        #pagination {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 10px;
+        }
+
+        /* --- Lightbox --- */
+        #lightbox-view {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.9);
+            display: none; /* Changed from flex to none */
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        #lightbox-view.active {
+            display: flex; /* Activate by changing display to flex */
+        }
+
+        #lightbox-content {
+            position: relative;
+            max-width: 90vw;
+            max-height: 85vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        #lightbox-content img, #lightbox-content video {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+        }
+
+        #lightbox-toolbar {
+            position: absolute;
+            bottom: -50px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 10px;
+            background: var(--primary-color);
+            padding: 10px;
+            border-radius: 8px;
+        }
+
+        .lightbox-nav {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            background: rgba(0,0,0,0.5);
+            color: white;
+            border: none;
+            font-size: 2em;
+            cursor: pointer;
+            padding: 10px;
+            border-radius: 50%;
+        }
+
+        #lightbox-prev { left: 10px; }
+        #lightbox-next { right: 10px; }
+        #lightbox-close {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            font-size: 2em;
+            color: white;
+            background: none;
+            border: none;
+            cursor: pointer;
+        }
+
+    </style>
+</head>
+<body>
+
+    <!-- Login View -->
+    <div id="login-view" class="view active">
+        <div class="card">
+            <h2>登录</h2>
+            <p>请输入您的 user-token 以继续。</p>
+            <div class="input-group">
+                <input type="text" id="user-token-input" placeholder="user-token">
+                <button id="login-button">登录</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main App View (Artists List and Details) -->
+    <div id="app-view" class="view">
+
+        <!-- Artist List View -->
+        <div id="artist-list-view">
+            <div class="card">
+                <h2>添加新艺术家</h2>
+                <div class="input-group">
+                    <input type="number" id="aid-input" placeholder="输入艺术家ID (aid)">
+                    <button id="add-artist-button">添加</button>
+                </div>
+            </div>
+            <div id="artists-container" class="card">
+                <!-- Artist cards will be injected here -->
+            </div>
+        </div>
+
+        <!-- Artist Detail View -->
+        <div id="artist-detail-view" style="display: none;">
+            <div class="card">
+                <div id="artist-detail-header">
+                    <img id="detail-artist-avatar" src="" alt="avatar">
+                    <h2 id="detail-artist-name"></h2>
+                </div>
+                <div style="margin-top: 20px; display: flex; gap: 10px;">
+                     <button id="back-to-list-button" class="secondary">返回列表</button>
+                     <button id="bulk-download-button">下载选中作品</button>
+                </div>
+            </div>
+            <div id="works-container">
+                <!-- Works will be injected here -->
+            </div>
+            <div id="pagination" class="card">
+                <!-- Pagination controls will be injected here -->
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Lightbox View for displaying full-size media -->
+    <div id="lightbox-view">
+        <button id="lightbox-close">&times;</button>
+        <button id="lightbox-prev" class="lightbox-nav">&lt;</button>
+        <div id="lightbox-content">
+            <!-- Image or video will be injected here -->
+        </div>
+        <button id="lightbox-next" class="lightbox-nav">&gt;</button>
+        <div id="lightbox-toolbar">
+            <button id="lightbox-zoom-in">放大</button>
+            <button id="lightbox-zoom-out">缩小</button>
+            <button id="lightbox-download">下载</button>
+            <select id="lightbox-speed" title="Playback Speed">
+                <option value="0.5">0.5x</option>
+                <option value="1" selected>1.0x</option>
+                <option value="1.5">1.5x</option>
+                <option value="2">2.0x</option>
+            </select>
+        </div>
+    </div>
+
+    <script>
+        /**
+         * Single-file vanilla JS application for browsing an artist gallery.
+         * - Handles token-based login.
+         * - Fetches artist and work data from external APIs.
+         * - Manages state for artists, works, and UI.
+         * - Features a lightbox for viewing and tools for downloading media.
+         * - All data is stored in the browser's localStorage.
+         */
+        document.addEventListener('DOMContentLoaded', () => {
+            // --- STATE MANAGEMENT ---
+            const state = {
+                userToken: null,
+                artists: [],
+                currentView: 'login', // 'login', 'artist-list', 'artist-detail'
+                currentArtist: null,
+                works: [],
+                currentPage: 1,
+                totalPages: 1,
+            };
+
+            // --- DOM ELEMENTS ---
+            const loginView = document.getElementById('login-view');
+            const appView = document.getElementById('app-view');
+            const userTokenInput = document.getElementById('user-token-input');
+            const loginButton = document.getElementById('login-button');
+
+            const artistListView = document.getElementById('artist-list-view');
+            const aidInput = document.getElementById('aid-input');
+            const addArtistButton = document.getElementById('add-artist-button');
+            const artistsContainer = document.getElementById('artists-container');
+
+            const artistDetailView = document.getElementById('artist-detail-view');
+            const detailArtistAvatar = document.getElementById('detail-artist-avatar');
+            const detailArtistName = document.getElementById('detail-artist-name');
+            const backToListButton = document.getElementById('back-to-list-button');
+            const bulkDownloadButton = document.getElementById('bulk-download-button');
+            const worksContainer = document.getElementById('works-container');
+            const paginationContainer = document.getElementById('pagination');
+
+            // Lightbox DOM Elements
+            const lightboxView = document.getElementById('lightbox-view');
+            const lightboxContent = document.getElementById('lightbox-content');
+            const lightboxClose = document.getElementById('lightbox-close');
+            const lightboxPrev = document.getElementById('lightbox-prev');
+            const lightboxNext = document.getElementById('lightbox-next');
+            const lightboxZoomIn = document.getElementById('lightbox-zoom-in');
+            const lightboxZoomOut = document.getElementById('lightbox-zoom-out');
+            const lightboxDownload = document.getElementById('lightbox-download');
+            const lightboxSpeed = document.getElementById('lightbox-speed');
+
+
+            // --- API ---
+            const api = {
+                getArtistInfo: (aid) => {
+                    return fetch("https://app.xiaofen.fun/api/m8551/674fb5df35978", {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json; charset=UTF-8',
+                            'user-token': state.userToken,
+                            'accept-platform': 'Web',
+                        },
+                        body: JSON.stringify({
+                            aid: aid,
+                            ven: 134
+                        })
+                    }).then(res => res.json());
+                },
+                getArtistWorks: (userId, page = 1) => {
+                    return fetch("https://app.xiaofen.fun/api/m8551/64448e18f032c", {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json; charset=UTF-8',
+                            'user-token': state.userToken,
+                            'accept-platform': 'Web',
+                        },
+                        body: JSON.stringify({
+                            page: page,
+                            pagesize: 15, // As per sample response
+                            list_rows: 15,
+                            sort: 1, // Time descending
+                            is_payment: 2,
+                            type: 2,
+                            grassclassify_id: state.currentArtist.aid,
+                            user_id: userId,
+                            ven: 134
+                        })
+                    }).then(res => res.json());
+                }
+            };
+
+            // --- VIEW MANAGEMENT ---
+            const navigateTo = (viewName) => {
+                state.currentView = viewName;
+
+                loginView.classList.remove('active');
+                appView.classList.remove('active');
+
+                artistListView.style.display = 'none';
+                artistDetailView.style.display = 'none';
+
+                switch (viewName) {
+                    case 'login':
+                        loginView.classList.add('active');
+                        break;
+                    case 'artist-list':
+                        appView.classList.add('active');
+                        artistListView.style.display = 'block';
+                        renderArtistList();
+                        break;
+                    case 'artist-detail':
+                        appView.classList.add('active');
+                        artistDetailView.style.display = 'block';
+                        renderArtistDetail();
+                        break;
+                }
+            };
+
+            // --- LIGHTBOX LOGIC ---
+            let currentZoom = 1;
+            let currentImageInWork = 0;
+
+            const closeLightbox = () => {
+                lightboxView.classList.remove('active');
+                lightboxContent.innerHTML = '';
+                currentZoom = 1; // Reset zoom
+            };
+
+            const showWorkInLightbox = () => {
+                const work = state.works[state.currentLightboxIndex];
+                if (!work) return;
+
+                lightboxContent.innerHTML = ''; // Clear previous content
+
+                const isVideo = work.video && work.video !== "";
+                const isMultiImage = !isVideo && work.images_url && work.images_url.length > 0;
+
+                lightboxSpeed.style.display = isVideo ? 'block' : 'none';
+                lightboxZoomIn.style.display = isVideo ? 'none' : 'block';
+                lightboxZoomOut.style.display = isVideo ? 'none' : 'block';
+
+                if (isVideo) {
+                    const video = document.createElement('video');
+                    video.src = work.video;
+                    video.controls = true;
+                    video.autoplay = true;
+                    lightboxContent.appendChild(video);
+                } else if (isMultiImage) {
+                    const img = document.createElement('img');
+                    img.src = work.images_url[currentImageInWork];
+                    img.style.transform = `scale(${currentZoom})`;
+                    lightboxContent.appendChild(img);
+                    // Add sub-navigation for multi-image works if needed
+                } else { // Fallback to thumb if no other media
+                    const img = document.createElement('img');
+                    img.src = work.thumb;
+                    img.style.transform = `scale(${currentZoom})`;
+                    lightboxContent.appendChild(img);
+                }
+
+                // Update nav buttons
+                lightboxPrev.style.visibility = state.currentLightboxIndex > 0 ? 'visible' : 'hidden';
+                lightboxNext.style.visibility = state.currentLightboxIndex < state.works.length - 1 ? 'visible' : 'hidden';
+            };
+
+            const openLightbox = (workIndex) => {
+                state.currentLightboxIndex = workIndex;
+                currentImageInWork = 0; // Reset for new work
+                lightboxView.classList.add('active');
+                showWorkInLightbox();
+            };
+
+            const changeLightboxWork = (direction) => {
+                const newIndex = state.currentLightboxIndex + direction;
+                if (newIndex >= 0 && newIndex < state.works.length) {
+                    openLightbox(newIndex);
+                }
+            };
+
+            const handleZoom = (direction) => {
+                currentZoom += direction * 0.2;
+                currentZoom = Math.max(0.2, currentZoom); // Minimum zoom 20%
+                const media = lightboxContent.querySelector('img');
+                if (media) {
+                    media.style.transform = `scale(${currentZoom})`;
+                }
+            };
+
+            // --- DOWNLOAD LOGIC ---
+            const showLoadingFeedback = (element, text = '处理中...') => {
+                element.dataset.originalText = element.textContent;
+                element.textContent = text;
+                element.disabled = true;
+            };
+
+            const hideLoadingFeedback = (element) => {
+                element.textContent = element.dataset.originalText;
+                element.disabled = false;
+            };
+
+            const downloadUrl = async (url, filename, element) => {
+                 if(element) showLoadingFeedback(element, '下载中...');
+                try {
+                    // Since the resource is cross-origin, we need a proxy or to fetch it as a blob.
+                    const response = await fetch(url, { mode: 'cors' });
+                     if (!response.ok) {
+                        // Fallback for CORS issues - open in new tab
+                        console.warn('CORS request failed. Opening in new tab as fallback.');
+                        window.open(url, '_blank');
+                        return;
+                    }
+                    const blob = await response.blob();
+                    const objectUrl = window.URL.createObjectURL(blob);
+
+                    const a = document.createElement('a');
+                    a.style.display = 'none';
+                    a.href = objectUrl;
+                    a.download = filename;
+                    document.body.appendChild(a);
+                    a.click();
+                    window.URL.revokeObjectURL(objectUrl);
+                    a.remove();
+                } catch (e) {
+                    console.error('Download error:', e);
+                    alert('下载失败。可能是因为跨域（CORS）限制。将尝试在新标签页中打开。');
+                    window.open(url, '_blank');
+                } finally {
+                    if (element) hideLoadingFeedback(element);
+                }
+            };
+
+            const handleSingleDownload = () => {
+                const work = state.works[state.currentLightboxIndex];
+                if (!work) return;
+
+                const artistName = state.currentArtist.name.replace(/[/\\?%*:|"<>]/g, '-');
+                const isVideo = work.video && work.video !== "";
+
+                if (isVideo) {
+                    const filename = `${artistName}-${work.aid}.mp4`;
+                    downloadUrl(work.video, filename, lightboxDownload);
+                } else if (work.images_url && work.images_url.length > 0) {
+                    const imageUrl = work.images_url[currentImageInWork];
+                    const extension = imageUrl.split('.').pop().split('?')[0] || 'jpg';
+                    const filename = `${artistName}-${work.aid}-${currentImageInWork + 1}.${extension}`;
+                    downloadUrl(imageUrl, filename, lightboxDownload);
+                } else {
+                    alert('没有可下载的媒体。');
+                }
+            };
+
+            const handleBulkDownload = async () => {
+                const selectedCheckboxes = worksContainer.querySelectorAll('.work-card-checkbox:checked');
+                if (selectedCheckboxes.length === 0) {
+                    alert('请先选择要下载的作品。');
+                    return;
+                }
+
+                showLoadingFeedback(bulkDownloadButton, `准备中 (0/${selectedCheckboxes.length})`);
+
+                const zip = new JSZip();
+                const artistName = state.currentArtist.name.replace(/[/\\?%*:|"<>]/g, '-');
+                let downloadedCount = 0;
+
+                for (const checkbox of selectedCheckboxes) {
+                    const workId = checkbox.dataset.workId;
+                    const work = state.works.find(w => w.aid == workId);
+                    if (!work) continue;
+
+                    const isVideo = work.video && work.video !== "";
+                    if (isVideo) {
+                        try {
+                            const response = await fetch(work.video, { mode: 'cors' });
+                            const blob = await response.blob();
+                            zip.file(`${artistName}-${work.aid}.mp4`, blob);
+                        } catch (e) { console.error(`Failed to download ${work.video}`, e); }
+                    } else if (work.images_url && work.images_url.length > 0) {
+                        for (let i = 0; i < work.images_url.length; i++) {
+                            const url = work.images_url[i];
+                            const extension = url.split('.').pop().split('?')[0] || 'jpg';
+                             try {
+                                const response = await fetch(url, { mode: 'cors' });
+                                const blob = await response.blob();
+                                zip.file(`${artistName}-${work.aid}-${i + 1}.${extension}`, blob);
+                            } catch (e) { console.error(`Failed to download ${url}`, e); }
+                        }
+                    }
+                    downloadedCount++;
+                    bulkDownloadButton.textContent = `压缩中 (${downloadedCount}/${selectedCheckboxes.length})`;
+                }
+
+                try {
+                    const content = await zip.generateAsync({ type: "blob" });
+                    const zipFilename = `${artistName}-作品集-${new Date().toISOString().slice(0,10)}.zip`;
+
+                    const a = document.createElement('a');
+                    a.style.display = 'none';
+                    a.href = window.URL.createObjectURL(content);
+                    a.download = zipFilename;
+                    document.body.appendChild(a);
+                    a.click();
+                    window.URL.revokeObjectURL(a.href);
+                    a.remove();
+
+                } catch (e) {
+                    console.error('Zip generation error', e);
+                    alert('生成ZIP文件失败。');
+                } finally {
+                    hideLoadingFeedback(bulkDownloadButton);
+                }
+            };
+
+
+            // --- ARTIST DETAIL LOGIC ---
+            const renderWorks = () => {
+                worksContainer.innerHTML = '';
+                state.works.forEach((work, index) => {
+                    const card = document.createElement('div');
+                    card.className = 'work-card';
+
+                    const media = work.video
+                        ? `<video src="${work.video}" preload="metadata"></video>`
+                        : `<img src="${work.thumb}" alt="${work.introduce || '作品图片'}">`;
+
+                    card.innerHTML = `
+                        ${media}
+                        <div class="work-card-info">
+                            <p>${work.create_time}</p>
+                            <p>${work.introduce.substring(0, 50) || '无描述'}</p>
+                        </div>
+                        <input type="checkbox" class="work-card-checkbox" data-work-id="${work.aid}">
+                    `;
+
+                    // Add click event to media, not the whole card, to avoid conflict with checkbox
+                    card.querySelector('img, video').addEventListener('click', () => {
+                        openLightbox(index);
+                    });
+
+                    worksContainer.appendChild(card);
+                });
+            };
+
+            const renderPagination = () => {
+                paginationContainer.innerHTML = '';
+                if (state.totalPages <= 1) return;
+
+                // Prev button
+                const prevButton = document.createElement('button');
+                prevButton.textContent = '上一页';
+                prevButton.disabled = state.currentPage === 1;
+                prevButton.addEventListener('click', () => {
+                    fetchAndRenderWorks(state.currentPage - 1);
+                });
+                paginationContainer.appendChild(prevButton);
+
+                // Page info
+                const pageInfo = document.createElement('span');
+                pageInfo.textContent = `第 ${state.currentPage} / ${state.totalPages} 页`;
+                paginationContainer.appendChild(pageInfo);
+
+                // Next button
+                const nextButton = document.createElement('button');
+                nextButton.textContent = '下一页';
+                nextButton.disabled = state.currentPage === state.totalPages;
+                nextButton.addEventListener('click', () => {
+                    fetchAndRenderWorks(state.currentPage + 1);
+                });
+                paginationContainer.appendChild(nextButton);
+            };
+
+            const fetchAndRenderWorks = async (page = 1) => {
+                if (!state.currentArtist) return;
+                worksContainer.innerHTML = '<p>加载中...</p>';
+                try {
+                    const result = await api.getArtistWorks(state.currentArtist.user_id, page);
+                    if (result.code === '1' && result.data.data) {
+                        state.works = result.data.data;
+                        state.currentPage = result.data.current_page;
+                        state.totalPages = result.data.last_page;
+                        renderWorks();
+                        renderPagination();
+                    } else {
+                        worksContainer.innerHTML = `<p>无法加载作品: ${result.msg}</p>`;
+                    }
+                } catch (error) {
+                    console.error('Fetch works error:', error);
+                    worksContainer.innerHTML = `<p>加载作品时发生网络错误。</p>`;
+                }
+            };
+
+            const renderArtistDetail = () => {
+                if (!state.currentArtist) {
+                    navigateTo('artist-list');
+                    return;
+                }
+                detailArtistAvatar.src = state.currentArtist.avatar;
+                detailArtistName.textContent = state.currentArtist.name;
+
+                // Reset view
+                worksContainer.innerHTML = '';
+                paginationContainer.innerHTML = '';
+
+                // Fetch first page of works
+                fetchAndRenderWorks(1);
+            };
+
+            // --- ARTIST LIST LOGIC ---
+            const saveArtists = () => {
+                localStorage.setItem('artists', JSON.stringify(state.artists));
+            };
+
+            const renderArtistList = () => {
+                artistsContainer.innerHTML = '';
+                if (state.artists.length === 0) {
+                    artistsContainer.innerHTML = '<p>还没有艺术家，请通过上方的输入框添加一个。</p>';
+                    return;
+                }
+                state.artists.forEach(artist => {
+                    const card = document.createElement('div');
+                    card.className = 'artist-card';
+                    card.dataset.aid = artist.aid;
+                    card.innerHTML = `
+                        <img src="${artist.avatar}" alt="${artist.name}">
+                        <p>${artist.name}</p>
+                    `;
+                    card.addEventListener('click', () => {
+                        state.currentArtist = artist;
+                        navigateTo('artist-detail');
+                    });
+                    artistsContainer.appendChild(card);
+                });
+            };
+
+            const handleAddArtist = async () => {
+                const aid = aidInput.value.trim();
+                if (!aid) {
+                    alert('请输入艺术家ID');
+                    return;
+                }
+
+                if (state.artists.find(a => a.aid == aid)) {
+                    alert('该艺术家已在列表中。');
+                    return;
+                }
+
+                addArtistButton.textContent = '添加中...';
+                addArtistButton.disabled = true;
+
+                try {
+                    const result = await api.getArtistInfo(aid);
+                    if (result.code === '1') {
+                        const artistData = result.data;
+                        const newArtist = {
+                            aid: artistData.aid,
+                            user_id: artistData.user_id,
+                            name: artistData.name || artistData.user_nickname,
+                            avatar: artistData.avatar,
+                            info: artistData.info,
+                            bg_img: artistData.bg_img,
+                        };
+                        state.artists.push(newArtist);
+                        saveArtists();
+                        renderArtistList();
+                        aidInput.value = '';
+                    } else {
+                        alert(`添加失败: ${result.msg}`);
+                    }
+                } catch (error) {
+                    console.error('Add artist error:', error);
+                    alert('添加艺术家时发生网络错误。');
+                } finally {
+                    addArtistButton.textContent = '添加';
+                    addArtistButton.disabled = false;
+                }
+            };
+
+            // --- LOGIN LOGIC ---
+            const handleLogin = () => {
+                const token = userTokenInput.value.trim();
+                if (token) {
+                    state.userToken = token;
+                    localStorage.setItem('user_token', token);
+                    navigateTo('artist-list');
+                } else {
+                    alert('请输入有效的 user-token');
+                }
+            };
+
+            const init = () => {
+                const savedToken = localStorage.getItem('user_token');
+                if (savedToken) {
+                    state.userToken = savedToken;
+                    state.artists = JSON.parse(localStorage.getItem('artists')) || [];
+                    navigateTo('artist-list');
+                } else {
+                    userTokenInput.value = '942dcf1f-4eae-9172-f7d0-2f95e797abf7'; // Default token
+                    navigateTo('login');
+                }
+
+                loginButton.addEventListener('click', handleLogin);
+                userTokenInput.addEventListener('keypress', (e) => {
+                    if (e.key === 'Enter') handleLogin();
+                });
+
+                addArtistButton.addEventListener('click', handleAddArtist);
+                aidInput.addEventListener('keypress', (e) => {
+                    if (e.key === 'Enter') handleAddArtist();
+                });
+
+                backToListButton.addEventListener('click', () => navigateTo('artist-list'));
+                bulkDownloadButton.addEventListener('click', handleBulkDownload);
+
+                // Lightbox listeners
+                lightboxClose.addEventListener('click', closeLightbox);
+                lightboxDownload.addEventListener('click', handleSingleDownload);
+                lightboxPrev.addEventListener('click', () => changeLightboxWork(-1));
+                lightboxNext.addEventListener('click', () => changeLightboxWork(1));
+                lightboxZoomIn.addEventListener('click', () => handleZoom(1));
+                lightboxZoomOut.addEventListener('click', () => handleZoom(-1));
+                lightboxSpeed.addEventListener('change', (e) => {
+                    const video = lightboxContent.querySelector('video');
+                    if (video) {
+                        video.playbackRate = parseFloat(e.target.value);
+                    }
+                });
+
+                // Keyboard navigation for lightbox
+                document.addEventListener('keydown', (e) => {
+                    if (!lightboxView.classList.contains('active')) return;
+                    if (e.key === 'Escape') closeLightbox();
+                    if (e.key === 'ArrowLeft') {
+                         const work = state.works[state.currentLightboxIndex];
+                         if (work && work.images_url && work.images_url.length > 1) {
+                            currentImageInWork = (currentImageInWork - 1 + work.images_url.length) % work.images_url.length;
+                            showWorkInLightbox();
+                         } else {
+                            changeLightboxWork(-1);
+                         }
+                    }
+                    if (e.key === 'ArrowRight') {
+                        const work = state.works[state.currentLightboxIndex];
+                         if (work && work.images_url && work.images_url.length > 1) {
+                            currentImageInWork = (currentImageInWork + 1) % work.images_url.length;
+                            showWorkInLightbox();
+                         } else {
+                            changeLightboxWork(1);
+                         }
+                    }
+                });
+            };
+
+            // --- INITIALIZE THE APP ---
+            init();
+        });
+    </script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+
+</body>
+</html>
